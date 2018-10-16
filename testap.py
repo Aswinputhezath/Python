@@ -1,0 +1,15 @@
+from time import sleep
+import Hostapd
+AP2 = Hostapd.Hostapd("AP.conf","172.16.2.190")
+AP2.channel('1')
+AP2.driver("nl80211")
+AP2.interface("wlan2")
+AP2.ap_ssid("CCI")
+AP2.mode("b")
+AP2.auth_algs("3")
+AP2.wpa_key_mgmt("WPA2-PSK")
+AP2.wpa_pairwise("CCMP")
+AP2.wpa_passphrase("123456789")
+AP2.serve_ap("start")
+#sleep(10000)
+#AP2.serve_ap("stop")

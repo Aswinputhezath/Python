@@ -1,0 +1,275 @@
+**Settings**
+Library  Dialogs
+Library  Hostapd.py  hostapd.conf  ${ap_eth_ip_addr} 
+Library  WpaSupplicant.py  wpa_supplicant.conf  ${sta_eth_ip_addr}
+Suite Setup  Configuration
+Test Setup  Pause Execution  Executing ${TEST NAME}
+
+
+** Variable **
+	
+${ap_wlan_ip_addr}     172.168.1.1
+${ap_eth_ip_addr}      198.168.1.1
+${sta_wlan_ip_addr}    172.168.1.25
+${sta_eth_ip_addr}     198.168.1.13
+${dhcp-range}          172.168.1.10, 172.168.1.100, 12h
+${ssid_name}           zAero
+${rs_eth_ip}           198.168.1.30
+${rs_port}             1812
+${rs_password}         testing123
+${eap_message}         hello
+${auth_username}       zilogic
+${auth_password}       123456789
+${eap_type}            PEAP
+
+
+**Keyword**
+
+Configuration
+	Pause Execution  Execute the test suite of ${SUITE NAME} and press OK
+	Pause Execution  Starting suite setup
+	Connect AP and radius server
+	Configure radius server
+	Configuration AP
+	Configuration station
+	Run radius server
+	Up monitor mode
+	Pause Execution  End of suite setup
+
+Configure radius server
+	Configure eth IP address in radius server
+	Configure IP and password of AP in radius server
+	Configure eap in radius server
+	Configure username and password in radius server
+
+Run radius server
+	Pause Execution  Kill radius server if running and press OK
+	Pause Execution  Run radius server in radius server pc with command "freeradius -X" and press OK
+	
+
+Configure eth IP address in radius server
+	Pause Execution  Check the interface with command "ifconfig -a" in Radius server and press OK
+	${rs_eth_interface}  Get Value From User  Enter the "eth" interface and Press OK
+	Pause Execution  Assign ip address to radius server eth interface with command "ifconfig ${rs_eth_interface} ${rs_eth_ip}" and press OK
+
+Configuration AP
+	Pause Execution  Configuring AP
+	Procedure  DUT  "minicom -s -D /dev/ttyUSB0"
+	up wlan interface for AP
+	Configure AP wlan IP address
+	up eth interface for AP
+	Configure AP eth IP address
+	Configure DNSmask
+	IP forwarding
+	Configure hostapd
+
+Procedure
+	[Arguments]  ${board}  ${terminal}
+	Pause Execution  Verify available board is ${board} and press OK
+	Pause Execution  Connect the Board with PC and press OK
+	Pause Execution  Open terminal in PC and press OK
+	Pause Execution  Open terminal with command ${terminal} and press OK
+	Pause Execution  Boot the board and press OK
+	Pause Execution  Enter Log-In as "root" and Password as "zilogic" then press OK
+
+up wlan interface for AP
+	Pause Execution  Check the interface with command "ifconfig -a" in AP and press OK
+	${ap_wlan_interface}  Get Value From User  Enter the "wlan" interface and Press OK
+	Set Suite Variable  ${ap_wlan_interface}
+	Pause Execution  Up the wlan interface with command "ifconfig ${ap_wlan_interface} up" in AP and press OK
+	
+Configure AP wlan IP address
+	Pause Execution  Assign ip address to AP wlan interface with command "ifconfig ${ap_wlan_interface} ${ap_wlan_ip_addr}" in AP and press OK
+
+Connect AP and radius server
+	Pause Execution  Connect AP and Radius server using ethernet cable and press OK
+
+up eth interface for AP
+	Pause Execution  Check the interface with command "ifconfig -a" in AP and press OK
+	${ap_eth_interface}  Get Value From User  Enter the AP "eth" interface and Press OK
+	Set Suite Variable  ${ap_eth_interface}
+	Pause Execution  Up the eth interface with command "ifconfig ${ap_eth_interface} up" in AP and press OK
+	
+Configure AP eth IP address
+	Pause Execution  Assign ip address to AP eth interface with command "ifconfig ${ap_eth_interface} ${ap_eth_ip_addr}" in AP and press OK
+
+IP forwarding
+	Pause Execution  Enable IP forwarding with the command "echo 1 > /proc/sys/net/ipv4/ip_forward" in AP and press OK
+
+Configure DNSmask
+	Pause Execution  Goto dnsmasq config path "/etc/" in AP and press OK
+	Pause Execution  open dnsmasq.conf file with text editor and press OK
+	Pause Execution  Configure \n\t"interface= ${ap_wlan_interface} \n\t dhcp-range= ${dhcp-range}\n\t dhcp-option=3, ${ap_wlan_ip_addr}" \n then press OK
+	Pause Execution  Save configuration and press OK
+	Pause Execution  Run dnsmasq.conf with command "service dnsmasq restart" in AP and press OK
+
+Configure hostapd
+	Interface  ${ap_wlan_interface}
+	Driver  nl80211
+	Ap SSID  ${ssid_name}
+	Channel  11
+	Mode  g
+	Auth Algs  2
+	Wpa Key Mgmt  WPA-EAP
+	Auth Server  ${rs_eth_ip}  ${rs_port}
+	Auth Server Secret  ${rs_password}
+	Eap Msg  ${eap_message}
+
+Configuration station
+	Procedure  TID  "minicom -s -D /dev/ttyUSB1"
+	up wlan interface for station
+	Pause Execution  Enter the STA IP address in terminal "ifconfig ${interface_station} ${sta_wlan_ip_addr}"
+	Configure wpa supplicant
+
+up wlan interface for station
+	Pause Execution  Check the interface with command "ifconfig -a" in STA and press OK
+	${interface_station}  Get Value From User  Enter the "wlan" interface and Press OK
+	Set Suite Variable  ${interface_station}
+	Pause Execution  Up the wlan interface with command "ifconfig ${interface_station} up" in STA and press OK
+
+Configure wpa supplicant
+	SSID  ${ssid_name}
+	Key_Mgt  WPA-EAP
+	EAP Type  ${eap_type}
+	User ID  ${auth_username}
+	User Pass  ${auth_password} 
+
+Configure username and password in radius server
+	Pause Execution  Goto radius server user path "/etc/freeradius/3.0/" and press OK
+	Pause Execution  Open user file with text editor and press OK
+	Pause Execution  Configure "${auth_username} Cleartext-Password := ${auth_password}" then press OK
+	Pause Execution  Save configuration and press OK
+
+Configure IP and password of AP in radius server
+	Pause Execution  Goto radius server clients.conf path "/etc/freeradius/3.0/" and press OK
+	Pause Execution  Open clients.conf file with text editor and press OK
+	Pause Execution  Search line "client private-network-1" and press OK
+	Pause Execution  Configure \n\t " ${SPACE * 5} ipaddr ${SPACE * 8} = ${ap_eth_ip_addr} \n\t${SPACE * 9} secret ${SPACE * 8} = ${rs_password}"\n then press OK
+	Pause Execution  Save configuration and press OK
+
+Configure eap in radius server
+	Pause Execution  Goto radius server eap path "/etc/freeradius/3.0/mods-enabled" and press OK
+	Pause Execution  Open eap file with text editor and press OK
+	Pause Execution  Search line "default_eap_type =" and press OK
+	Pause Execution  Configure "default_eap_type = ${eap_type}" then press OK
+	Pause Execution  Save configuration and press OK
+
+data encryption set to TKIP
+	Set AP with encryption  TKIP
+	Set station with encryption  TKIP
+
+data encryption set to TKIP + AES
+	Set AP with encryption  TKIP CCMP
+	Set station with encryption  TKIP CCMP
+
+Set AP with encryption
+	[Arguments]  ${enc_key}
+	Wpa Pairwise  ${enc_key}
+
+Set station with encryption
+	[Arguments]  ${enc_key}	
+	Pairwise  ${enc_key}
+
+request to connect STA with AP
+	Sniff the packet
+	Run Hostapd configuration
+	Run wpa supplicant configuration
+
+Up monitor mode
+	Pause Execution  Take monitor mode device to up monitor mode interface and press OK
+	Pause Execution  Enter the command in laptop "iw phy | head | grep W" and press OK
+	${phy_interface}  Get Value From User  Enter the "phy" interface and Press OK
+	Pause Execution  Enable the monitor interface in laptop using "iw phy ${phy_interface} interface add mon0 type monitor" and press OK
+	Pause Execution  Up the monitor interface in laptop using "ifconfig mon0 up" and press OK
+
+Sniff the packet
+	Pause Execution  Enter the command in laptop "tshark -i mon0 -w ${SUITE NAME}.pcap &" and press OK
+
+Run Hostapd configuration
+	Serve AP  stop
+	Serve AP  start
+
+Run wpa supplicant configuration
+	Serve STA  stop
+	Serve STA  start
+
+STA should be connected to AP with TKIP
+	Filter auth frames
+	ANonce frame
+	SNonce MIC frame
+	GTK MIC frame  TKIP
+	Ack Frame
+
+STA should be connected to AP with TKIP + AES
+	Filter auth frames
+	ANonce frame
+	SNonce MIC frame
+	GTK MIC frame  AES + TKIP
+	Ack Frame
+
+Filter auth frames
+	Pause Execution  Enter the command "wireshark ${SUITE NAME}.pcap"
+	${ap_mac}  Get Value From User  Enter MAC address of AP
+	${sta_mac}  Get Value From User  Enter MAC address of STA
+	Pause Execution  Add the filter "eapol && wlan.addr==${ap_mac} && wlan.addr==${sta_mac}" press apply in wireshark and press OK
+
+ANonce frame
+	Execute Manual Step  FRAME FIELD SHOULD CONTAIN ANonce FRAME 802.1X Authentication
+	Execute Manual Step  802.1X Authentication should contain "Key Descriptor Type: EAPOL WPA Key (254)"
+	Execute Manual Step  802.1X Authentication should contain "Key information"
+	Execute Manual Step  key information should contain "001 = Key Descriptor Version: RC4 Cipher, HMAC-MD5 MIC (1)"
+	Execute Manual Step  key information should contain "1 = Key Type: Pairwise Key and 1 = Key ACK: Set"
+	Execute Manual Step  802.1X Authentication should contain "WPA Key Nonce: some values"
+
+SNonce MIC frame
+	Execute Manual Step  FRAME FIELD SHOULD CONTAIN SNonce FRAME 802.1X Authentication
+	Execute Manual Step  802.1X Authentication should contain "Key Descriptor Type: EAPOL WPA Key (254)"
+	Execute Manual Step  802.1X Authentication should contain "Key information"
+	Execute Manual Step  key information should contain "001 = Key Descriptor Version: RC4 Cipher, HMAC-MD5 MIC (1)"
+	Execute Manual Step  key information should contain "1 = Key Type: Pairwise Key and 1 = Key MIC: Set"
+	Execute Manual Step  802.1X Authentication should contain "WPA Key Nonce: some values"
+	Execute Manual Step  802.1X Authentication should contain "WPA Key MIC: some values"
+	Execute Manual Step  802.1X Authentication should contain "WPA Key Data: some values"
+	Execute Manual Step  802.1X Authentication => WPA Key Data => Tag => "WPA Version: 1"
+	Execute Manual Step  802.1X Authentication => WPA Key Data => Tag => "Multicast Cipher Suit: * TKIP"
+	Execute Manual Step  802.1X Authentication => WPA Key Data => Tag => "Unicast Cipher Suit: * TKIP"
+	Execute Manual Step  802.1X Authentication => WPA Key Data => Tag => "Auth Key Management (AKM) Suit: * WPA"
+
+GTK MIC frame
+	[Arguments]  ${enc_key}
+	Execute Manual Step  FRAME FIELD SHOULD CONTAIN GTK MIC FRAME 802.1X Authentication
+	Execute Manual Step  802.1X Authentication should contain "Key Descriptor Type: EAPOL WPA Key (254)"
+	Execute Manual Step  802.1X Authentication should contain "Key information"
+	Execute Manual Step  key information should contain "001 = Key Descriptor Version: RC4 Cipher, HMAC-MD5 MIC (1)"
+	Execute Manual Step  key information should contain "1 = Install: Set and 1 Key ACK: Set"
+	Execute Manual Step  key information should contain "1 = Key MIC: Set"
+	Execute Manual Step  802.1X Authentication should contain "WPA Key Nonce: some values"
+	Execute Manual Step  802.1X Authentication should contain "WPA Key MIC: some values"
+	Execute Manual Step  802.1X Authentication should contain "WPA Key Data: some values"
+	Execute Manual Step  802.1X Authentication => WPA Key Data => Tag => "WPA Version: 1"
+	Execute Manual Step  802.1X Authentication => WPA Key Data => Tag => "Multicast Cipher Suite: * TKIP"
+	Execute Manual Step  802.1X Authentication => WPA Key Data => Tag => "Unicast Cipher Suite List: * ${enc_key}"
+	Execute Manual Step  802.1X Authentication => WPA Key Data => Tag => "Auth Key Management (AKM) List: * WPA"
+
+Ack Frame
+	Execute Manual Step  FRAME FIELD SHOULD CONTAIN ACK FRAME 802.1X Authentication
+	Execute Manual Step  802.1X Authentication should contain "Key Descriptor Type: EAPOL WPA Key (254)"
+	Execute Manual Step  802.1X Authentication should contain "Key information"
+	Execute Manual Step  key information should contain "001 = Key Descriptor Version: RC4 Cipher, HMAC-MD5 MIC (1)"
+	Execute Manual Step  key information should contain "1 = Key Type: Pairwise Key and 1 = Key MIC: Set"
+	Execute Manual Step  802.1X Authentication should contain "WPA Key MIC: some value"
+
+
+
+
+**Test Case**
+
+Verify station association to AP with radius authentication when data encryption is TKIP
+	When data encryption set to TKIP
+	And request to connect STA with AP
+	Then STA should be connected to AP with TKIP
+
+Verify station association to AP with radius authentication when data encryption is set to TKIP + AES
+	When data encryption set to TKIP + AES
+	And request to connect STA with AP
+	Then STA should be connected to AP with TKIP + AES
