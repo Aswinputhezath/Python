@@ -1,0 +1,16 @@
+** Settings **
+
+Library  String
+Library  SerialComm.py  port=/dev/ttyUSB0  baudrate=115200
+
+** Test Cases **
+
+Verify serial communication
+	Login  root  zilogic
+	${stat}  Login Status
+	${out}  SendLine  ifconfig eth0 192.168.1.1 up
+        ${output}  SendLine  ifconfig wlan1 172.16.2.1 up
+        ${output2}  SendLine  python HandleService.py
+ 	Log  ${out}
+	Log  ${stat}  WARN
+        
